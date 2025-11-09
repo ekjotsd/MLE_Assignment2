@@ -1,0 +1,80 @@
+{
+    "evaluation_date": "2025-11-09T02:31:47.797360",
+    "models": {
+        "LogisticRegression": {
+            "train_metrics": {
+                "accuracy": 0.7049345417925479,
+                "precision": 0.4843205574912892,
+                "recall": 0.6595492289442467,
+                "f1_score": 0.5585133098945254,
+                "auc_roc": 0.7530495965896722,
+                "log_loss": 0.59796623277245
+            },
+            "val_metrics": {
+                "accuracy": 0.6981505944517834,
+                "precision": 0.5016077170418006,
+                "recall": 0.6797385620915033,
+                "f1_score": 0.5772432932469935,
+                "auc_roc": 0.7275717870086423,
+                "log_loss": 0.6285781236153337,
+                "weighted_score": 0.6372804248867794
+            },
+            "test_metrics": {
+                "accuracy": 0.6882470119521913,
+                "precision": 0.4719387755102041,
+                "recall": 0.6357388316151202,
+                "f1_score": 0.541727672035139,
+                "auc_roc": 0.7256739106336424,
+                "log_loss": 0.6157967505202394
+            },
+            "params": {
+                "C": 0.5,
+                "max_iter": 2000,
+                "random_state": 42,
+                "solver": "saga",
+                "penalty": "l1",
+                "class_weight": "balanced"
+            }
+        },
+        "XGBoost": {
+            "train_metrics": {
+                "accuracy": 0.8569989929506546,
+                "precision": 0.7034146341463414,
+                "recall": 0.8552787663107948,
+                "f1_score": 0.771948608137045,
+                "auc_roc": 0.9407736825853803,
+                "log_loss": 0.3731365315659096
+            },
+            "val_metrics": {
+                "accuracy": 0.7569352708058125,
+                "precision": 0.5816876122082585,
+                "recall": 0.7058823529411765,
+                "f1_score": 0.6377952755905512,
+                "auc_roc": 0.804126010593811,
+                "log_loss": 0.5212831232628119,
+                "weighted_score": 0.7097391104157226
+            },
+            "test_metrics": {
+                "accuracy": 0.7430278884462151,
+                "precision": 0.5478260869565217,
+                "recall": 0.6494845360824743,
+                "f1_score": 0.5943396226415094,
+                "auc_roc": 0.7742128270749894,
+                "log_loss": 0.5462788656050577
+            },
+            "params": {
+                "n_estimators": 150,
+                "max_depth": 5,
+                "learning_rate": 0.05,
+                "subsample": 0.7,
+                "colsample_bytree": 0.7,
+                "min_child_weight": 3,
+                "gamma": 0.1,
+                "random_state": 42,
+                "eval_metric": "logloss",
+                "use_label_encoder": false,
+                "scale_pos_weight": 2
+            }
+        }
+    }
+}

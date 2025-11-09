@@ -1,13 +1,8 @@
-https://github.com/YOUR_USERNAME/MLE_Assignment2
+https://github.com/ekjotsd/MLE_Assignment2
 
 Project: Loan Default Prediction ML Pipeline
 Assignment: CS611 - Machine Learning Engineering - Assignment 2
 
-IMPLEMENTATION NOTES:
-- Custom 2-model approach (LogisticRegression + XGBoost)
-- Weighted scoring for model selection (0.5*AUC + 0.3*F1 + 0.2*Precision)
-- Purple/teal visualization theme
-- Renamed DAGs for clarity
 
 === QUICK START ===
 1. docker-compose build

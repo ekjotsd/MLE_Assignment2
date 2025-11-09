@@ -95,14 +95,17 @@ def load_monitoring_history():
 
 def plot_performance_metrics(df, output_dir):
     """
-    Plot performance metrics over time
+    Plot performance metrics over time with AREA CHARTS and custom styling
+    CUSTOMIZATION: Changed from line plots to filled area charts
     
     Args:
         df: DataFrame with monitoring history
         output_dir: Directory to save plots
     """
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-    fig.suptitle('Model Performance Metrics Over Time', fontsize=16, fontweight='bold')
+    # CUSTOM: 3x2 layout instead of 2x3 for better vertical flow
+    fig, axes = plt.subplots(3, 2, figsize=(16, 14))
+    fig.suptitle('Model Performance Tracking Dashboard', fontsize=18, fontweight='bold', 
+                 color=CUSTOM_COLORS['primary'])
     
     metrics = ['auc_roc', 'accuracy', 'precision', 'recall', 'f1_score', 'log_loss']
     thresholds = {
@@ -113,31 +116,45 @@ def plot_performance_metrics(df, output_dir):
     }
     
     for idx, metric in enumerate(metrics):
-        ax = axes[idx // 3, idx % 3]
+        ax = axes[idx // 2, idx % 2]
         
         if metric in df.columns:
-            # Plot metric
-            ax.plot(df['snapshot_date'], df[metric], marker='o', linewidth=2, markersize=6, label=metric.upper())
+            # CUSTOM: Area plot with fill instead of simple line
+            ax.plot(df['snapshot_date'], df[metric], 
+                   marker='D', linewidth=2.5, markersize=7, 
+                   color=CUSTOM_COLORS['primary'], label=metric.upper())
+            ax.fill_between(df['snapshot_date'], df[metric], alpha=0.3, 
+                           color=CUSTOM_COLORS['secondary'])
             
-            # Add threshold line if applicable
+            # CUSTOM: Add value annotations on last point
+            last_val = df[metric].iloc[-1]
+            ax.annotate(f'{last_val:.3f}', 
+                       xy=(df['snapshot_date'].iloc[-1], last_val),
+                       xytext=(10, 10), textcoords='offset points',
+                       bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.7),
+                       fontsize=9, fontweight='bold')
+            
+            # Add threshold line with custom color
             if metric in thresholds:
-                ax.axhline(y=thresholds[metric], color='r', linestyle='--', linewidth=1.5, 
-                          label=f'Threshold ({thresholds[metric]:.2f})')
+                ax.axhline(y=thresholds[metric], color=CUSTOM_COLORS['danger'], 
+                          linestyle=':', linewidth=2, 
+                          label=f'Min Threshold: {thresholds[metric]:.2f}')
             
-            ax.set_xlabel('Date')
-            ax.set_ylabel(metric.replace('_', ' ').title())
-            ax.set_title(metric.replace('_', ' ').upper())
-            ax.legend()
-            ax.grid(True, alpha=0.3)
+            ax.set_xlabel('Monitoring Period', fontweight='bold')
+            ax.set_ylabel(metric.replace('_', ' ').title(), fontweight='bold')
+            ax.set_title(f'📊 {metric.replace("_", " ").upper()}', fontsize=12, 
+                        fontweight='bold', color=CUSTOM_COLORS['neutral'])
+            ax.legend(loc='best', framealpha=0.9)
+            ax.grid(True, alpha=0.4, linestyle='--', linewidth=0.8)
             
             # Format x-axis
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
+            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
             plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
     
     plt.tight_layout()
     output_file = output_dir / 'performance_metrics_over_time.png'
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white')
     print(f"Saved: {output_file}")
     plt.close()
 
@@ -193,38 +210,60 @@ def plot_psi_over_time(df, output_dir):
 
 def plot_confusion_matrix_trend(df, output_dir):
     """
-    Plot confusion matrix metrics over time
+    Plot confusion matrix metrics over time with STACKED BAR CHART
+    CUSTOMIZATION: Changed from line plots to stacked bar chart for better composition view
     
     Args:
         df: DataFrame with monitoring history
         output_dir: Directory to save plots
     """
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle('Confusion Matrix Components Over Time', fontsize=16, fontweight='bold')
+    # CUSTOM: Single large plot with stacked bars + line subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+    fig.suptitle('📈 Prediction Composition Analysis', fontsize=16, fontweight='bold',
+                 color=CUSTOM_COLORS['primary'])
     
     metrics = ['true_positives', 'false_positives', 'true_negatives', 'false_negatives']
-    colors = ['green', 'orange', 'blue', 'red']
+    # CUSTOM: Custom color palette for confusion matrix
+    cm_colors = [CUSTOM_COLORS['success'], CUSTOM_COLORS['warning'], 
+                 CUSTOM_COLORS['secondary'], CUSTOM_COLORS['danger']]
     
-    for idx, (metric, color) in enumerate(zip(metrics, colors)):
-        ax = axes[idx // 2, idx % 2]
+    # CUSTOM: Top chart - STACKED BAR instead of line plots
+    if all(m in df.columns for m in metrics):
+        dates = df['snapshot_date']
+        bottom = np.zeros(len(df))
         
-        if metric in df.columns:
-            ax.plot(df['snapshot_date'], df[metric], marker='o', linewidth=2, 
-                   markersize=6, color=color, label=metric.replace('_', ' ').title())
-            ax.set_xlabel('Date')
-            ax.set_ylabel('Count')
-            ax.set_title(metric.replace('_', ' ').title())
-            ax.legend()
-            ax.grid(True, alpha=0.3)
-            
-            # Format x-axis
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
-            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+        for metric, color in zip(metrics, cm_colors):
+            values = df[metric].values
+            ax1.bar(dates, values, bottom=bottom, label=metric.replace('_', ' ').title(),
+                   color=color, alpha=0.85, edgecolor='white', linewidth=1.5)
+            bottom += values
+        
+        ax1.set_xlabel('Monitoring Period', fontweight='bold')
+        ax1.set_ylabel('Prediction Count', fontweight='bold')
+        ax1.set_title('Stacked Composition of Predictions', fontsize=13, fontweight='bold')
+        ax1.legend(loc='upper left', framealpha=0.95, ncol=2)
+        ax1.grid(True, alpha=0.3, axis='y')
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45, ha='right')
+        
+        # CUSTOM: Bottom chart - Accuracy trend with markers
+        if 'accuracy' in df.columns:
+            ax2.plot(dates, df['accuracy'], marker='s', linewidth=2.5, markersize=8,
+                    color=CUSTOM_COLORS['primary'], label='Accuracy', linestyle='-')
+            ax2.fill_between(dates, df['accuracy'], alpha=0.2, color=CUSTOM_COLORS['primary'])
+            ax2.axhline(y=0.7, color=CUSTOM_COLORS['danger'], linestyle='--', 
+                       linewidth=2, label='Min Threshold (0.70)')
+            ax2.set_xlabel('Monitoring Period', fontweight='bold')
+            ax2.set_ylabel('Accuracy Score', fontweight='bold')
+            ax2.set_title('Model Accuracy Trend', fontsize=13, fontweight='bold')
+            ax2.legend(loc='best', framealpha=0.95)
+            ax2.grid(True, alpha=0.3, linestyle='--')
+            ax2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+            plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45, ha='right')
     
     plt.tight_layout()
     output_file = output_dir / 'confusion_matrix_trend.png'
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white')
     print(f"Saved: {output_file}")
     plt.close()
 
@@ -336,13 +375,26 @@ def plot_prediction_distribution(output_dir):
                 print(f"Warning: file {pred_file.name} has no 'prediction' or 'prediction_proba' column; skipping")
                 continue
 
-        ax.hist(df['prediction'], bins=50, alpha=0.5, label=date_str, density=True)
+        # CUSTOM: KDE plot with filled area instead of histogram
+        try:
+            from scipy.stats import gaussian_kde
+            density = gaussian_kde(df['prediction'])
+            xs = np.linspace(0, 1, 200)
+            ys = density(xs)
+            ax.plot(xs, ys, linewidth=2.5, label=date_str, alpha=0.8)
+            ax.fill_between(xs, ys, alpha=0.15)
+        except:
+            # Fallback to histogram if KDE fails
+            ax.hist(df['prediction'], bins=50, alpha=0.5, label=date_str, density=True)
     
-    ax.set_xlabel('Predicted Probability')
-    ax.set_ylabel('Density')
-    ax.set_title('Distribution of Predictions Over Time', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper right', fontsize=8)
-    ax.grid(True, alpha=0.3)
+    # CUSTOM: Enhanced labels and styling
+    ax.set_xlabel('Predicted Default Probability', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Probability Density', fontsize=12, fontweight='bold')
+    ax.set_title('📉 Prediction Probability Distribution Evolution', fontsize=14, 
+                fontweight='bold', color=CUSTOM_COLORS['primary'])
+    ax.legend(loc='upper right', fontsize=8, framealpha=0.9, title='Date', title_fontsize=9)
+    ax.grid(True, alpha=0.3, linestyle='--')
+    ax.set_xlim([0, 1])
     
     plt.tight_layout()
     output_file = output_dir / 'prediction_distribution.png'

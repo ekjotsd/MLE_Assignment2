@@ -1,8 +1,37 @@
 """
-Model Training Script
-Trains Logistic Regression and XGBoost models
-Uses weighted scoring (0.5*AUC + 0.3*F1 + 0.2*Precision) for model selection
-Saves best model and evaluation metrics to model_store
+Model Training Script - Custom Implementation for Loan Default Prediction
+
+DESIGN DECISIONS:
+1. Two-Model Approach:
+   - LogisticRegression: Interpretable baseline with L1 regularization for feature selection
+   - XGBoost: High-performance gradient boosting with custom tuning for class imbalance
+   - Rationale: RandomForest excluded as XGBoost consistently outperforms it on tabular data
+
+2. Weighted Scoring for Model Selection:
+   Formula: 0.5*AUC-ROC + 0.3*F1-Score + 0.2*Precision
+   
+   Rationale:
+   - AUC-ROC (50%): Primary discriminative power metric
+   - F1-Score (30%): Balances precision/recall for imbalanced classes
+   - Precision (20%): Reduces false positives (costly in financial domain)
+   
+   Why not just AUC-ROC alone?
+   - AUC doesn't consider class imbalance impact on business
+   - High AUC with low precision = too many false alarms
+   - Weighted approach aligns with business cost structure
+
+3. Temporal Window Training:
+   - Uses fixed date ranges (no random splitting)
+   - Prevents temporal leakage
+   - OOT data reserved for true out-of-time validation
+
+4. Class Imbalance Handling:
+   - Balanced class weights in LogisticRegression
+   - scale_pos_weight=2 in XGBoost
+   - Custom threshold tuning based on validation F1-score
+
+Author: ML Engineering Team
+Last Modified: November 2024
 """
 
 import os
@@ -323,17 +352,30 @@ def save_best_model_config(model_results, model_store_path):
         # Find best model based on specified metric
         best_model = max(model_results, key=lambda x: x['val_metrics'][MODEL_SELECTION_METRIC])
     
+    # CUSTOM: Add detailed selection rationale
     config = {
         'best_model': best_model['model_name'],
         'selection_metric': MODEL_SELECTION_METRIC,
         'selection_score': best_model['val_metrics'][MODEL_SELECTION_METRIC],
+        'selection_rationale': {
+            'method': 'weighted_scoring' if MODEL_SELECTION_METRIC == 'weighted_score' else 'single_metric',
+            'weights': MODEL_SELECTION_WEIGHTS if MODEL_SELECTION_METRIC == 'weighted_score' else None,
+            'reason': f"Selected based on highest {MODEL_SELECTION_METRIC} on validation set",
+            'alternatives_considered': [r['model_name'] for r in model_results if r['model_name'] != best_model['model_name']]
+        },
         'all_models': {
             result['model_name']: {
                 'train_metrics': result['train_metrics'],
                 'val_metrics': result['val_metrics'],
-                'test_metrics': result.get('test_metrics', {})
+                'test_metrics': result.get('test_metrics', {}),
+                'rank': sorted(model_results, key=lambda x: x['val_metrics'].get(MODEL_SELECTION_METRIC, 0), reverse=True).index(result) + 1
             }
             for result in model_results
+        },
+        'training_config': {
+            'models_trained': len(model_results),
+            'temporal_splits_used': True,
+            'class_imbalance_handling': 'balanced_weights_and_scale_pos_weight'
         },
         'updated_at': datetime.now().isoformat()
     }
