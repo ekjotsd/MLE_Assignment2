@@ -1,0 +1,111 @@
+# ===============================================================
+# Loan Default Prediction ML Pipeline - Docker Compose Config
+# Custom ML pipeline with 2-model training and weighted scoring
+# ===============================================================
+
+services:
+  airflow-init:
+    build: .
+    container_name: ml_pipeline_init
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__FERNET_KEY=PAqBeGJLJTYFzVkOGHWIYXdLO7XdXz5yTdxAGJe9ezM=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    labels:
+      - "project=loan-default-prediction"
+      - "component=initialization"
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./pipeline_config:/opt/airflow/pipeline_config
+      - ./data:/opt/airflow/data
+      - ./datamart:/opt/airflow/datamart
+      - ./model_store:/opt/airflow/model_store
+      - ./results:/opt/airflow/results
+    # Initialize Airflow database and create default admin user
+    entrypoint: >
+      /bin/bash -c "airflow db init &&
+      airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com || true"
+
+  airflow-webserver:
+    build: .
+    container_name: ml_pipeline_webserver
+    depends_on:
+      - airflow-init
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__FERNET_KEY=PAqBeGJLJTYFzVkOGHWIYXdLO7XdXz5yTdxAGJe9ezM=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    labels:
+      - "project=loan-default-prediction"
+      - "component=webserver"
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./pipeline_config:/opt/airflow/pipeline_config
+      - ./data:/opt/airflow/data
+      - ./datamart:/opt/airflow/datamart
+      - ./model_store:/opt/airflow/model_store
+      - ./results:/opt/airflow/results
+    ports:
+      - "8080:8080"
+    entrypoint: >
+      /bin/bash -c "
+      echo '=============================================================' &&
+      echo '  LOAN DEFAULT PREDICTION ML PIPELINE' &&
+      echo '  Initializing Airflow Webserver...' &&
+      echo '=============================================================' &&
+      airflow webserver &
+      WEBSERVER_PID=$$! &&
+      sleep 10 &&
+      echo '' &&
+      echo '=============================================================' &&
+      echo '  ✓ ML PIPELINE READY!' &&
+      echo '=============================================================' &&
+      echo '' &&
+      echo '  Access Airflow UI:' &&
+      echo '  → http://localhost:8080' &&
+      echo '' &&
+      echo '  Login Credentials:' &&
+      echo '  → Username: airflow' &&
+      echo '  → Password: airflow' &&
+      echo '' &&
+      echo '  Available DAGs:' &&
+      echo '  → data_pipeline (Bronze→Silver→Gold)' &&
+      echo '  → model_trainer (LogReg + XGBoost)' &&
+      echo '  → prediction_monitor (Inference & Monitoring)' &&
+      echo '' &&
+      echo '=============================================================' &&
+      echo '' &&
+      wait $$WEBSERVER_PID
+      "
+
+  airflow-scheduler:
+    build: .
+    container_name: ml_pipeline_scheduler
+    depends_on:
+      - airflow-init
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__FERNET_KEY=PAqBeGJLJTYFzVkOGHWIYXdLO7XdXz5yTdxAGJe9ezM=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    labels:
+      - "project=loan-default-prediction"
+      - "component=scheduler"
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./pipeline_config:/opt/airflow/pipeline_config
+      - ./data:/opt/airflow/data
+      - ./datamart:/opt/airflow/datamart
+      - ./model_store:/opt/airflow/model_store
+      - ./results:/opt/airflow/results
+    command: scheduler
+
+# Named volume for Airflow metadata persistence
+volumes:
+  airflow_data:
+    name: loan_default_ml_pipeline_data
